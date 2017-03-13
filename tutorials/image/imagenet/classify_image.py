@@ -40,6 +40,7 @@ import os.path
 import re
 import sys
 import tarfile
+from tensorflow.python.client import timeline
 
 import numpy as np
 from six.moves import urllib
@@ -143,7 +144,7 @@ def run_inference_on_image(image):
   # Creates graph from saved GraphDef.
   create_graph()
 
-  with tf.Session() as sess:
+  with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
     # Some useful tensors:
     # 'softmax:0': A tensor containing the normalized prediction across
     #   1000 labels.
@@ -153,8 +154,15 @@ def run_inference_on_image(image):
     #   encoding of the image.
     # Runs the softmax tensor by feeding the image_data as input to the graph.
     softmax_tensor = sess.graph.get_tensor_by_name('softmax:0')
+    run_metadata = tf.RunMetadata()
     predictions = sess.run(softmax_tensor,
-                           {'DecodeJpeg/contents:0': image_data})
+                           {'DecodeJpeg/contents:0': image_data},
+                           options=tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE),
+                           run_metadata=run_metadata)
+    trace = timeline.Timeline(step_stats=run_metadata.step_stats)
+    trace_file = open('timeline.ctf.json', 'w')
+    trace_file.write(trace.generate_chrome_trace_format())
+
     predictions = np.squeeze(predictions)
 
     # Creates node ID --> English string lookup.
