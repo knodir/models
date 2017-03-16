@@ -143,8 +143,10 @@ def run_inference_on_image(image):
 
   # Creates graph from saved GraphDef.
   create_graph()
+  NUM_THREADS = 8
 
-  with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
+  with tf.Session(config=tf.ConfigProto(log_device_placement=True,
+      intra_op_parallelism_threads=NUM_THREADS)) as sess:
     # Some useful tensors:
     # 'softmax:0': A tensor containing the normalized prediction across
     #   1000 labels.
